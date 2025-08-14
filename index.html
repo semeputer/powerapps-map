@@ -13,6 +13,16 @@
 
   <style>
     #map { height: 100vh; width: 100%; }
+    .popup-content { font-size: 14px; }
+    .photo-button { 
+      display: inline-block; 
+      margin-top: 5px; 
+      padding: 3px 6px; 
+      background-color: #007bff; 
+      color: white; 
+      text-decoration: none; 
+      border-radius: 3px; 
+    }
   </style>
 </head>
 <body>
@@ -20,7 +30,7 @@
 
   <script>
     // Initialize the map
-    const map = L.map('map').setView([14.584, 121.112], 12); // default center
+    const map = L.map('map').setView([14.584, 121.112], 12);
 
     // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -36,14 +46,31 @@
         const markers = JSON.parse(decodeURIComponent(dataJSON));
 
         markers.forEach(item => {
+          // Create popup content with extra fields
+          let popupHtml = `
+            <div class="popup-content">
+              <strong>${item.Name}</strong><br>
+              ${item.SurveyDate}<br>
+              Pole Tag: ${item.PoleTag || '-'}<br>
+              Street: ${item.StreetName || '-'}<br>
+          `;
+
+          // If Photo URL exists, add a clickable link
+          if (item.Photo) {
+            popupHtml += `<a class="photo-button" href="${item.Photo}" target="_blank">View Photo</a>`;
+          }
+
+          popupHtml += `</div>`;
+
           L.marker([item.Latitude, item.Longitude])
-           .bindPopup(`${item.Name}<br>${item.SurveyDate}`)
+           .bindPopup(popupHtml)
            .addTo(map);
         });
 
         // Fit map to all markers
         const group = L.featureGroup(markers.map(m => L.marker([m.Latitude, m.Longitude])));
         map.fitBounds(group.getBounds().pad(0.2));
+
       } catch(e) {
         console.error("Invalid JSON data:", e);
       }
