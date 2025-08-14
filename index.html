@@ -35,17 +35,14 @@
     if (dataJSON) {
       try {
         const markers = JSON.parse(decodeURIComponent(dataJSON));
-
-        // Add markers
-        const markerObjs = []; // keep for fitting map bounds
+        const markerObjs = [];
 
         markers.forEach(item => {
           const popupHtml = `
             <div class="popup-content">
               <strong>${item.Name}</strong><br>
-              ${item.SurveyDate}<br>
-              Pole Tag: ${item.PoleTag || '-'}<br>
-              Street: ${item.StreetName || '-'}
+              ${item.DateTime}<br>
+              Pole Tag: ${item.PoleTag || '-'}
             </div>
           `;
 
@@ -57,7 +54,7 @@
         });
 
         // Fit map to all markers
-        if(markerObjs.length > 0){
+        if (markerObjs.length > 0) {
           const group = L.featureGroup(markerObjs);
           map.fitBounds(group.getBounds().pad(0.2));
         }
