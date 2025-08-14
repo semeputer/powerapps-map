@@ -14,6 +14,7 @@
   <style>
     #map { height: 100vh; width: 100%; }
     .popup-content { font-size: 14px; }
+    .popup-content img { width: 120px; display: block; margin-top: 5px; border: 1px solid #ccc; }
   </style>
 </head>
 <body>
@@ -28,6 +29,9 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
+    // Base URL for photos (your SharePoint folder link converted to direct download)
+    const basePhotoUrl = "https://pldt365-my.sharepoint.com/:u:/g/personal/pldangalan_pldt_com_ph/EoX-gNjTEnFIsKefyzhfBsgBYkg_v8Hi8QGzfY4IVT0_Eg?download=1&file=";
+
     // Read JSON data from URL parameter
     const params = new URLSearchParams(window.location.search);
     const dataJSON = params.get("data");
@@ -38,11 +42,13 @@
         const markerObjs = [];
 
         markers.forEach(item => {
-          // Only show Pole Tag and Street Name
+          const photoUrl = item.Photo ? basePhotoUrl + item.Photo : null;
+
           const popupHtml = `
             <div class="popup-content">
               Pole Tag: ${item.PoleTag || '-'}<br>
-              Street Name: ${item.StreetName || '-'}
+              Street Name: ${item.StreetName || '-'}<br>
+              ${photoUrl ? `<img src="${photoUrl}" alt="Photo">` : ''}
             </div>
           `;
 
