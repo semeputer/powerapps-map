@@ -45,31 +45,32 @@
       try {
         const markers = JSON.parse(decodeURIComponent(dataJSON));
 
+        // Add markers
+        const markerObjs = []; // keep for fitting map bounds
+
         markers.forEach(item => {
-          // Create popup content with extra fields
-          let popupHtml = `
+          const popupHtml = `
             <div class="popup-content">
               <strong>${item.Name}</strong><br>
               ${item.SurveyDate}<br>
               Pole Tag: ${item.PoleTag || '-'}<br>
               Street: ${item.StreetName || '-'}<br>
+              ${item.Photo ? `<a class="photo-button" href="${item.Photo}" target="_blank">View Photo</a>` : ''}
+            </div>
           `;
 
-          // If Photo URL exists, add a clickable link
-          if (item.Photo) {
-            popupHtml += `<a class="photo-button" href="${item.Photo}" target="_blank">View Photo</a>`;
-          }
+          const marker = L.marker([item.Latitude, item.Longitude])
+            .bindPopup(popupHtml)
+            .addTo(map);
 
-          popupHtml += `</div>`;
-
-          L.marker([item.Latitude, item.Longitude])
-           .bindPopup(popupHtml)
-           .addTo(map);
+          markerObjs.push(marker);
         });
 
         // Fit map to all markers
-        const group = L.featureGroup(markers.map(m => L.marker([m.Latitude, m.Longitude])));
-        map.fitBounds(group.getBounds().pad(0.2));
+        if(markerObjs.length > 0){
+          const group = L.featureGroup(markerObjs);
+          map.fitBounds(group.getBounds().pad(0.2));
+        }
 
       } catch(e) {
         console.error("Invalid JSON data:", e);
