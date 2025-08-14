@@ -38,11 +38,11 @@
         const markerObjs = [];
 
         markers.forEach(item => {
+          // Only show Pole Tag and Street Name
           const popupHtml = `
             <div class="popup-content">
-              <strong>${item.Name}</strong><br>
-              ${item.DateTime}<br>
-              Pole Tag: ${item.PoleTag || '-'}
+              Pole Tag: ${item.PoleTag || '-'}<br>
+              Street Name: ${item.StreetName || '-'}
             </div>
           `;
 
