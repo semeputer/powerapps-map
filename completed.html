@@ -5,49 +5,36 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Leaflet CSV Map</title>
 
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
   <style>
     html,body { height:100%; margin:0; }
-    #map { height:100vh; width:100%; }
+    #map { height:100%; width:100%; }
   </style>
 </head>
 <body>
   <div id="map"></div>
 
-  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <!-- PapaParse for CSV -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-
   <script>
-    // Init map at your default location
     const map = L.map('map').setView([14.634795597447003, 121.10150332968968], 12);
 
-    // OSM tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
+      attribution: '&copy; OpenStreetMap'
     }).addTo(map);
 
-    // Load CSV from GitHub
     const csvUrl = "https://raw.githubusercontent.com/semeputer/powerapps-map/main/data.csv";
 
     Papa.parse(csvUrl, {
       download: true,
-      header: true, // assumes first row has column names
-      skipEmptyLines: true,
+      header: true,
       complete: function(results) {
         results.data.forEach(row => {
           const lat = parseFloat(row.lat || row.latitude);
           const lon = parseFloat(row.lon || row.longitude);
           if (!isNaN(lat) && !isNaN(lon)) {
-            // Build popup with all row data
-            let popup = "";
-            for (let key in row) {
-              popup += `<strong>${key}:</strong> ${row[key]}<br>`;
-            }
-            L.marker([lat, lon]).addTo(map).bindPopup(popup);
+            L.marker([lat, lon]).addTo(map);
           }
         });
       }
