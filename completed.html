@@ -21,23 +21,50 @@
       z-index: 1000;
       font-size: 14px;
     }
+    #backButton {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      padding: 6px 12px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    #backButton:hover {
+      background: #0056b3;
+    }
   </style>
 </head>
 <body>
+  <!-- Back button -->
+  <button id="backButton" onclick="window.history.back()">Back</button>
+
+  <!-- Filter dropdown -->
   <select id="filter">
     <option value="all">Show All</option>
   </select>
+
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script>
-    const map = L.map('map').setView([14.634795597447003, 121.10150332968968], 12);
+    // Initialize map with zoom disabled (we'll reposition it later)
+    const map = L.map('map', { zoomControl: false }).setView([14.634795597447003, 121.10150332968968], 12);
 
+    // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap'
     }).addTo(map);
+
+    // Add zoom control at bottom-right
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     const csvUrl = "https://raw.githubusercontent.com/semeputer/powerapps-map/main/data.csv";
 
