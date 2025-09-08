@@ -29,10 +29,11 @@
     Papa.parse(csvUrl, {
       download: true,
       header: true,
+      skipEmptyLines: true,
       complete: function(results) {
         results.data.forEach(row => {
-          const lat = parseFloat(row.lat || row.latitude);
-          const lon = parseFloat(row.lon || row.longitude);
+          const lat = parseFloat(row.Latitude);
+          const lon = parseFloat(row.Longitude);
           if (!isNaN(lat) && !isNaN(lon)) {
             L.marker([lat, lon]).addTo(map);
           }
