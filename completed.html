@@ -3,15 +3,30 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Leaflet CSV Map</title>
+  <title>Leaflet CSV Map with Filter</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
   <style>
     html,body { height:100%; margin:0; }
     #map { height:100%; width:100%; }
+    #filter {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      padding: 6px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      z-index: 1000;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
+  <select id="filter">
+    <option value="all">Show All</option>
+  </select>
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -26,17 +41,48 @@
 
     const csvUrl = "https://raw.githubusercontent.com/semeputer/powerapps-map/main/data.csv";
 
+    const markers = [];
+    let allData = [];
+
+    // Load CSV
     Papa.parse(csvUrl, {
       download: true,
       header: true,
       skipEmptyLines: true,
       complete: function(results) {
-        results.data.forEach(row => {
+        allData = results.data;
+
+        // Add markers
+        allData.forEach(row => {
           const lat = parseFloat(row.Latitude);
           const lon = parseFloat(row.Longitude);
           if (!isNaN(lat) && !isNaN(lon)) {
-            L.marker([lat, lon]).addTo(map);
+            const marker = L.marker([lat, lon]).bindPopup(`<b>${row.Name}</b>`);
+            marker.addTo(map);
+            markers.push({ name: row.Name, marker });
           }
+        });
+
+        // Populate dropdown with unique names
+        const names = [...new Set(allData.map(r => r.Name))];
+        const filter = document.getElementById("filter");
+        names.forEach(name => {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          filter.appendChild(option);
+        });
+
+        // Filter behavior
+        filter.addEventListener("change", e => {
+          const value = e.target.value;
+          markers.forEach(obj => {
+            if (value === "all" || obj.name === value) {
+              obj.marker.addTo(map);
+            } else {
+              map.removeLayer(obj.marker);
+            }
+          });
         });
       }
     });
