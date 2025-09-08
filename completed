@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Leaflet CSV Map — GitHub-ready</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="" crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   <style>
@@ -22,7 +22,6 @@
   <header>
     <div style="font-weight:600">Leaflet CSV Map</div>
     <div class="controls">
-      <!-- Paste your raw GitHub CSV URL here (see notes below) -->
       <input id="csvUrl" type="text" placeholder="Raw CSV URL or leave empty to upload file" />
       <input id="fileInput" type="file" accept="text/csv,.csv" />
       <button id="loadBtn">Load CSV</button>
@@ -38,7 +37,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" integrity="" crossorigin=""></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" crossorigin=""></script>
   <script>
     // -------------------------
     // Configuration / helpers
@@ -76,8 +75,6 @@
         const lat = parseFloat(row[latIndex]);
         const lon = parseFloat(row[lonIndex]);
         if(Number.isFinite(lat) && Number.isFinite(lon)){
-          // prepare popup with other columns
-          const other = headers.map((h,i)=>({h, v: row[i]})).filter(c => iNotLatLon(c.h));
           const popupHtml = buildPopup(headers, row, latIndex, lonIndex);
           const m = L.marker([lat, lon]);
           m.bindPopup(popupHtml);
@@ -86,23 +83,16 @@
         }
       });
       if(bounds.length) map.fitBounds(bounds, {maxZoom:14});
-
-      function iNotLatLon(h){
-        const hn = normalizeHeader(h);
-        return !['lat','latitude','lon','lng','longitude','x','y'].includes(hn);
-      }
     }
 
     function buildPopup(headers, row, latIndex, lonIndex){
       const lines = headers.map((h,i)=> {
-        const hn = normalizeHeader(h);
         if(i===latIndex || i===lonIndex) return null;
         return `<strong>${escapeHtml(h)}:</strong> ${escapeHtml(row[i] ?? '')}`;
       }).filter(Boolean);
       return lines.join('<br />') || 'No attributes';
     }
 
-    // minimal HTML escape
     function escapeHtml(s){
       return String(s)
         .replace(/&/g,'&amp;')
@@ -130,11 +120,9 @@
     clearBtn.addEventListener('click', () => { clearMarkers(); });
 
     function fetchCsvFromUrl(url){
-      // GitHub raw URL works if file is public. Example:
-      // https://raw.githubusercontent.com/<user>/<repo>/main/data/points.csv
       Papa.parse(url, {
         download: true,
-        header: false, // we'll handle headers manually to allow flexible column names
+        header: false,
         skipEmptyLines: true,
         complete: function(results){
           if(results && results.data && results.data.length>0){
@@ -166,16 +154,13 @@
       });
     }
 
-    // Helper: if CSV has headers as first row (strings), we used header:false; but many CSVs use quoted headers.
-    // The code above treats the first row as headers. If your CSV already has same-named columns in different order, it's fine.
-
     // -------------------------
-    // Sample CSV data (for testing):
-    // lat,lon,name,description
-    // 14.6760,121.0437,Quezon City,Metro Manila
-    // 14.5995,120.9842,Manila,Capital
+    // Auto-load your CSV from GitHub on page load
+    // Adjust path if data.csv is inside a folder (e.g., /docs/data.csv)
     // -------------------------
-
+    window.addEventListener("DOMContentLoaded", () => {
+      fetchCsvFromUrl("https://raw.githubusercontent.com/semeputer/powerapps-map/main/data.csv");
+    });
   </script>
 </body>
 </html>
