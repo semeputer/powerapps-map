@@ -13,33 +13,42 @@
 
   <style>
     #map { height: 100vh; width: 100%; }
-    #topButton {
+    #completedButton {
       position: absolute;
       top: 10px;
       left: 10px;
       z-index: 1000;
-      padding: 8px 12px;
-      background: white;
-      border: 1px solid #ccc;
+      padding: 8px 16px;
+      background: #28a745; /* Green */
+      color: white;
+      border: none;
       border-radius: 4px;
       cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    #completedButton:hover {
+      background: #218838; /* Darker green on hover */
     }
   </style>
 </head>
 <body>
   <!-- Redirect button -->
-  <button id="topButton" onclick="window.location.href='completed.html'">Go to Completed</button>
+  <button id="completedButton" onclick="window.location.href='completed.html'">COMPLETED</button>
 
   <div id="map"></div>
 
   <script>
-    // Initialize the map
-    const map = L.map('map').setView([14.584, 121.112], 12);
+    // Initialize the map with zoom controls at bottom right
+    const map = L.map('map', { zoomControl: false }).setView([14.584, 121.112], 12);
 
     // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+
+    // Re-add zoom control at bottom right
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     // Read JSON data from URL parameter
     const params = new URLSearchParams(window.location.search);
