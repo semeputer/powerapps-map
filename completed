@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Leaflet CSV Map — GitHub-ready</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="" crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <style>
+    html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,Arial}
+    #map{height:calc(100vh - 72px)}
+    header{padding:10px 16px;display:flex;gap:12px;align-items:center;background:#fff;border-bottom:1px solid #e6e6e6}
+    .controls{display:flex;gap:8px;align-items:center}
+    input[type=text]{width:420px;padding:8px;border-radius:6px;border:1px solid #ccc}
+    button{padding:8px 12px;border-radius:6px;border:1px solid #888;background:#f7f7f7;cursor:pointer}
+    .muted{color:#666;font-size:13px}
+    @media(max-width:640px){input[type=text]{width:160px}}
+  </style>
+</head>
+<body>
+  <header>
+    <div style="font-weight:600">Leaflet CSV Map</div>
+    <div class="controls">
+      <!-- Paste your raw GitHub CSV URL here (see notes below) -->
+      <input id="csvUrl" type="text" placeholder="Raw CSV URL or leave empty to upload file" />
+      <input id="fileInput" type="file" accept="text/csv,.csv" />
+      <button id="loadBtn">Load CSV</button>
+      <button id="clearBtn">Clear Markers</button>
+    </div>
+    <div style="margin-left:auto;text-align:right">
+      <div class="muted">Expected columns: <code>lat</code>, <code>lon</code> or <code>latitude</code>, <code>longitude</code> (case-insensitive). Other columns shown in popups.</div>
+      <div class="muted">Tip: use GitHub raw URL (raw.githubusercontent.com) for public repo CSV.</div>
+    </div>
+  </header>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" integrity="" crossorigin=""></script>
+  <script>
+    // -------------------------
+    // Configuration / helpers
+    // -------------------------
+    const map = L.map('map', { zoomControl: true }).setView([12.8797, 121.7740], 6); // Philippines default view
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const markerGroup = L.markerClusterGroup();
+    map.addLayer(markerGroup);
+
+    function normalizeHeader(h){ return String(h || '').trim().toLowerCase(); }
+
+    function findLatLonKeys(headers){
+      const low = headers.map(normalizeHeader);
+      const latIndex = low.findIndex(h => ['lat','latitude','y'].includes(h));
+      const lonIndex = low.findIndex(h => ['lon','lng','longitude','x'].includes(h));
+      return {latIndex, lonIndex};
+    }
+
+    function clearMarkers(){ markerGroup.clearLayers(); }
+
+    function addMarkersFromRows(headers, rows){
+      const {latIndex, lonIndex} = findLatLonKeys(headers);
+      if(latIndex === -1 || lonIndex === -1){
+        alert('Could not find latitude/longitude columns. Make sure your CSV has columns named lat/lon or latitude/longitude.');
+        return;
+      }
+
+      const bounds = [];
+      rows.forEach(row => {
+        const lat = parseFloat(row[latIndex]);
+        const lon = parseFloat(row[lonIndex]);
+        if(Number.isFinite(lat) && Number.isFinite(lon)){
+          // prepare popup with other columns
+          const other = headers.map((h,i)=>({h, v: row[i]})).filter(c => iNotLatLon(c.h));
+          const popupHtml = buildPopup(headers, row, latIndex, lonIndex);
+          const m = L.marker([lat, lon]);
+          m.bindPopup(popupHtml);
+          markerGroup.addLayer(m);
+          bounds.push([lat, lon]);
+        }
+      });
+      if(bounds.length) map.fitBounds(bounds, {maxZoom:14});
+
+      function iNotLatLon(h){
+        const hn = normalizeHeader(h);
+        return !['lat','latitude','lon','lng','longitude','x','y'].includes(hn);
+      }
+    }
+
+    function buildPopup(headers, row, latIndex, lonIndex){
+      const lines = headers.map((h,i)=> {
+        const hn = normalizeHeader(h);
+        if(i===latIndex || i===lonIndex) return null;
+        return `<strong>${escapeHtml(h)}:</strong> ${escapeHtml(row[i] ?? '')}`;
+      }).filter(Boolean);
+      return lines.join('<br />') || 'No attributes';
+    }
+
+    // minimal HTML escape
+    function escapeHtml(s){
+      return String(s)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+    }
+
+    // -------------------------
+    // CSV loading logic
+    // -------------------------
+    const csvUrlInput = document.getElementById('csvUrl');
+    const fileInput = document.getElementById('fileInput');
+    const loadBtn = document.getElementById('loadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    loadBtn.addEventListener('click', () => {
+      const url = csvUrlInput.value.trim();
+      if(url) fetchCsvFromUrl(url);
+      else if(fileInput.files.length) parseLocalFile(fileInput.files[0]);
+      else alert('Either paste a raw CSV URL or choose a local CSV file to upload.');
+    });
+
+    clearBtn.addEventListener('click', () => { clearMarkers(); });
+
+    function fetchCsvFromUrl(url){
+      // GitHub raw URL works if file is public. Example:
+      // https://raw.githubusercontent.com/<user>/<repo>/main/data/points.csv
+      Papa.parse(url, {
+        download: true,
+        header: false, // we'll handle headers manually to allow flexible column names
+        skipEmptyLines: true,
+        complete: function(results){
+          if(results && results.data && results.data.length>0){
+            const headers = results.data[0];
+            const rows = results.data.slice(1);
+            addMarkersFromRows(headers, rows);
+          } else {
+            alert('No data parsed from CSV.');
+          }
+        },
+        error: function(err){
+          alert('Error loading CSV: ' + err.message);
+        }
+      });
+    }
+
+    function parseLocalFile(file){
+      Papa.parse(file, {
+        header: false,
+        skipEmptyLines: true,
+        complete: function(results){
+          if(results && results.data && results.data.length>0){
+            const headers = results.data[0];
+            const rows = results.data.slice(1);
+            addMarkersFromRows(headers, rows);
+          } else alert('No data parsed from file.');
+        },
+        error: function(err){ alert('Error parsing file: ' + err.message); }
+      });
+    }
+
+    // Helper: if CSV has headers as first row (strings), we used header:false; but many CSVs use quoted headers.
+    // The code above treats the first row as headers. If your CSV already has same-named columns in different order, it's fine.
+
+    // -------------------------
+    // Sample CSV data (for testing):
+    // lat,lon,name,description
+    // 14.6760,121.0437,Quezon City,Metro Manila
+    // 14.5995,120.9842,Manila,Capital
+    // -------------------------
+
+  </script>
+</body>
+</html>
